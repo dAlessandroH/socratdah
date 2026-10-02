@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!--
+    Política de seguridad: solo se ejecuta código de este sitio y de 3 archivos exactos del CDN (verificados con SRI),
+    y la página solo puede conectarse a api.anthropic.com. Así, aunque algo intentara leer tu API key, no podría enviarla a otro sitio.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' https://cdn.jsdelivr.net/npm/marked@18.0.14/lib/marked.umd.js https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js https://cdn.jsdelivr.net/npm/mermaid@12.1.0/dist/mermaid.min.js;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:;
+    font-src 'self' data:;
+    connect-src 'self' https://api.anthropic.com;
+    worker-src 'self';
+    manifest-src 'self';
+    media-src 'none';
+    object-src 'none';
+    frame-src 'none';
+    base-uri 'none';
+    form-action 'none';
+  " />
+  <meta name="referrer" content="no-referrer" />
+  <title>SocraTDAH</title>
+  <meta name="description" content="Estudio de medicina para TDAH: esquemas jerárquicos y tutor socrático con casos clínicos." />
+  <meta name="theme-color" content="#0b0d10" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SocraTDAH" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@18.0.14/lib/marked.umd.js"
+    integrity="sha384-2vpGtuKqJvFlwJqYnf/wUMuzUfhUnYBt9oay0e2yaFcq0Dh6/aEbQ8YAOeKGzlYo"
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"
+    integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL"
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+
+<body>
+  <!-- ================= Cabecera ================= -->
+  <header class="topbar no-print">
+    <div class="topbar-inner">
+      <div class="brand"><span class="brand-dot"></span><span class="brand-name">SocraTDAH</span></div>
+
+      <nav class="tabs" role="tablist" aria-label="Secciones">
+        <button class="tab-btn" data-tab="esquema" role="tab"><span class="sm-up">1. </span>Esquema<span class="md-up"> Rápido</span></button>
+        <button class="tab-btn" data-tab="tutor" role="tab"><span class="sm-up">2. </span>Tutor<span class="md-up"> Socrático</span></button>
+        <button class="tab-btn" data-tab="historial" role="tab"><span class="sm-up">3. </span>Historial</button>
+      </nav>
+
+      <div class="top-actions">
+        <button id="usageChip" class="chip-btn sm-up" title="Gasto de hoy">$0 hoy</button>
+
+        <div class="pomo-wrap">
+          <button id="pomoBtn" class="chip-btn" aria-haspopup="dialog" aria-expanded="false" title="Pomodoro y racha">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+            <span id="pomoLabel"></span>
+          </button>
+          <div id="pomoPop" class="popover hidden" role="dialog" aria-label="Pomodoro">
+            <p id="pomoMode" class="muted small">Listo para empezar</p>
+            <div id="pomoTime" class="pomo-time">25:00</div>
+            <div class="row">
+              <button id="pomoStart" class="btn btn-primary">Empezar</button>
+              <button id="pomoReset" class="btn btn-ghost">Reiniciar</button>
+            </div>
+            <div class="pomo-opts">
+              <span class="muted small">Enfoque (min)</span>
+              <div id="pomoFocusOpts" class="seg seg-sm"><button data-min="15">15</button><button data-min="20">20</button><button data-min="25">25</button></div>
+            </div>
+            <div class="pomo-opts">
+              <span class="muted small">Pausa (min)</span>
+              <div id="pomoBreakOpts" class="seg seg-sm"><button data-min="5">5</button><button data-min="10">10</button></div>
+            </div>
+            <hr />
+            <p class="muted small">Hoy</p>
+            <div id="pomoStats" class="stats-grid"></div>
+            <p id="pomoStreak" class="streak"></p>
+          </div>
+        </div>
+
+        <button id="openSettingsBtn" class="icon-btn" aria-label="Ajustes" title="Ajustes">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Barra de lectura en voz alta -->
+  <div id="ttsBar" class="tts-bar hidden no-print" role="region" aria-label="Lectura en voz alta">
+    <span class="tts-wave" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span id="ttsLabel">Leyendo…</span>
+    <button id="ttsPause" class="icon-btn" aria-label="Pausar">❚❚</button>
+    <button id="ttsStop" class="icon-btn" aria-label="Detener">⏹</button>
+  </div>
+
+  <main class="container">
+
+    <!-- ================= 1. Esquema ================= -->
+    <section id="tab-esquema" class="tab-panel" role="tabpanel">
+      <div id="esqInput" class="input-card no-print">
+        <label for="sourceText" class="label">Pega tu texto o adjunta fotos de apuntes, diapositivas o un PDF</label>
+        <textarea id="sourceText" rows="8" placeholder="Ej: Insuficiencia cardiaca: fisiopatología, clasificación NYHA, tratamiento…"></textarea>
+        <div id="attachList" class="attach-list hidden"></div>
+        <div class="input-toolbar">
+          <div class="row">
+            <button id="attachBtn" class="btn btn-sm btn-ghost" type="button">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+              Adjuntar
+            </button>
+            <button id="micEsquema" class="btn btn-sm btn-ghost mic" type="button" aria-pressed="false" title="Dictar por voz">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+              Dictar
+            </button>
+            <input id="fileInput" type="file" accept="image/*,application/pdf" multiple hidden />
+          </div>
+          <span id="charCount" class="muted small">0 caracteres</span>
+        </div>
+        <div class="drop-hint" aria-hidden="true">Suelta aquí tus fotos o PDF</div>
+      </div>
+
+      <div class="row no-print">
+        <button id="generateBtn" class="btn btn-primary">Generar Esquema</button>
+        <button id="stopEsquemaBtn" class="btn btn-outline hidden">Detener</button>
+        <span class="muted small sm-up">Ctrl/⌘ + Enter</span>
+      </div>
+
+      <div id="esquemaStatus" class="status hidden no-print">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span id="esquemaStatusText">Pensando…</span>
+      </div>
+      <div id="esquemaError" class="error hidden no-print" role="alert"></div>
+
+      <div id="esquemaResult" class="hidden">
+        <div class="result-toolbar no-print">
+          <button id="esqPractice" class="btn btn-sm btn-primary">Practicar con un caso →</button>
+          <button id="esqSpeak" class="btn btn-sm btn-outline">🔊 Escuchar</button>
+          <button id="esqCopy" class="btn btn-sm btn-outline">Copiar</button>
+          <button id="esqDownload" class="btn btn-sm btn-outline" title="Descargar Markdown">⬇ .md</button>
+          <button id="esqPrint" class="btn btn-sm btn-outline" title="Imprimir o guardar como PDF">⬇ PDF</button>
+          <button id="esqNew" class="btn btn-sm btn-ghost">Nuevo</button>
+        </div>
+        <article id="esquemaOutput" class="md md-doc"></article>
+        <p id="esquemaMeta" class="muted small meta no-print"></p>
+      </div>
+    </section>
+
+    <!-- ================= 2. Tutor ================= -->
+    <section id="tab-tutor" class="tab-panel hidden" role="tabpanel">
+      <div class="chat-shell">
+        <div class="chat-top">
+          <div id="caseBar" class="case-bar hidden">
+            <span id="caseTitle" class="case-title"></span>
+            <span class="score" title="Puntaje del caso">
+              <span class="s-ok">✓ <b id="scoreOk">0</b></span>
+              <span class="s-partial">◐ <b id="scorePartial">0</b></span>
+              <span class="s-bad">✗ <b id="scoreBad">0</b></span>
+              <b id="scorePct" class="pct">–</b>
+            </span>
+            <button id="closeCaseBtn" class="btn btn-sm btn-outline" title="Ver resumen y guardar lagunas">Cerrar caso</button>
+          </div>
+          <button id="resetChatBtn" class="btn btn-sm btn-ghost">Nuevo caso ↺</button>
+        </div>
+
+        <div id="chatLog" class="chat-log" aria-live="polite">
+          <div id="chatEmpty" class="chat-empty">
+            <p>Escribe un tema para empezar un caso clínico.</p>
+            <div id="topicChips" class="chips">
+              <button class="chip">Síndrome Coronario Agudo</button>
+              <button class="chip">Cetoacidosis diabética</button>
+              <button class="chip">Sepsis</button>
+              <button class="chip">Tromboembolia pulmonar</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="chatError" class="error hidden" role="alert"></div>
+        <div id="chatClosed" class="closed-bar hidden">
+          <span>Caso cerrado. Sus lagunas están en Historial.</span>
+          <button id="newCaseBtn" class="btn btn-sm btn-primary">Nuevo caso</button>
+        </div>
+
+        <form id="chatForm" class="chat-form">
+          <button id="micChat" type="button" class="icon-btn mic" aria-pressed="false" aria-label="Dictar respuesta" title="Dictar por voz">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+          </button>
+          <textarea id="chatInput" rows="1" placeholder="Tema o tu respuesta…" aria-label="Mensaje"></textarea>
+          <button id="sendBtn" type="submit" class="btn btn-primary">Enviar</button>
+          <button id="stopChatBtn" type="button" class="btn btn-outline hidden">Detener</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= 3. Historial ================= -->
+    <section id="tab-historial" class="tab-panel hidden" role="tabpanel">
+      <div class="hist-top">
+        <input id="histSearch" type="search" class="input" placeholder="Buscar en esquemas, casos y lagunas…" aria-label="Buscar" />
+        <div class="hist-filters-row">
+          <div id="histFilters" class="seg">
+            <button data-filter="all">Todo <span class="count"></span></button>
+            <button data-filter="esquema">Esquemas <span class="count"></span></button>
+            <button data-filter="caso">Casos <span class="count"></span></button>
+            <button data-filter="laguna">Lagunas <span class="count"></span></button>
+          </div>
+          <label id="histPendingWrap" class="check hidden"><input id="histPending" type="checkbox" /> Solo pendientes</label>
+        </div>
+      </div>
+      <p id="histEmpty" class="muted empty hidden"></p>
+      <div id="histList" class="hist-list"></div>
+      <p class="muted small foot-note">Todo se guarda solo en este navegador y en este dispositivo.</p>
+    </section>
+  </main>
+
+  <!-- ================= Modal: API Key ================= -->
+  <div id="keyModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="keyTitle">
+    <div class="modal-card">
+      <h2 id="keyTitle">Configura tu API Key</h2>
+      <p class="muted">Se guarda solo en este navegador y se envía únicamente a <code>api.anthropic.com</code>.</p>
+      <form id="keyForm" class="stack">
+        <input id="keyInput" type="password" class="input mono" autocomplete="off" spellcheck="false" aria-label="API Key" />
+        <label class="check"><input id="keyRemember" type="checkbox" checked /> Recordar en este dispositivo</label>
+        <p class="muted small">Desmárcalo en computadoras compartidas: la clave se borrará al cerrar la pestaña.</p>
+        <p id="keyError" class="error-text hidden"></p>
+        <details class="tips">
+          <summary>Protege tu cuenta (recomendado)</summary>
+          <ol>
+            <li>Crea una clave <strong>solo para esta app</strong> en <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">la consola de Anthropic</a>.</li>
+            <li>Ponle un <strong>límite de gasto mensual</strong> en <a href="https://console.anthropic.com/settings/limits" target="_blank" rel="noopener noreferrer">Settings → Limits</a>. Es el tope real: ni con tu clave alguien podría gastar más.</li>
+            <li>Si sospechas que se filtró, revócala en la consola y pega una nueva aquí.</li>
+          </ol>
+        </details>
+        <div class="modal-actions">
+          <button id="keyCancel" type="button" class="btn btn-ghost">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= Modal: Ajustes ================= -->
+  <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-card modal-wide">
+      <div class="modal-head">
+        <h2 id="settingsTitle">Ajustes</h2>
+        <button id="settingsClose" class="icon-btn" aria-label="Cerrar">×</button>
+      </div>
+
+      <section class="set-section">
+        <h3>API Key</h3>
+        <div class="row between">
+          <div><code id="keyMasked"></code><p id="keyStorageNote" class="muted small"></p></div>
+          <div class="row">
+            <button id="keyChange" class="btn btn-sm btn-outline">Cambiar</button>
+            <button id="keyDelete" class="btn btn-sm btn-ghost danger">Borrar</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="set-section">
+        <h3>Modelos</h3>
+        <label class="field"><span>Esquemas</span><select id="setModelEsquema" class="input"></select></label>
+        <label class="field"><span>Tutor</span><select id="setModelTutor" class="input"></select></label>
+      </section>
+
+      <section class="set-section">
+        <h3>Gasto</h3>
+        <label class="field"><span>Límite diario (USD, 0 = sin límite)</span><input id="setDailyLimit" type="number" min="0" step="0.5" class="input" /></label>
+        <p class="muted small">Al llegar al límite, la app deja de enviar peticiones hasta mañana. Es una protección local; el tope definitivo es el límite mensual de la consola de Anthropic.</p>
+        <table class="usage-table">
+          <thead><tr><th></th><th>Hoy</th><th>Total</th></tr></thead>
+          <tbody id="usageTable"></tbody>
+        </table>
+        <p class="muted small">El costo es una estimación con precios de lista. El historial de la conversación se reutiliza desde caché (a 0.1×) cuando supera el mínimo del modelo.</p>
+      </section>
+
+      <section class="set-section">
+        <h3>Voz</h3>
+        <p id="voiceUnsupported" class="muted small hidden"></p>
+        <label class="field"><span>Idioma</span>
+          <select id="setVoiceLang" class="input">
+            <option value="es-MX">Español (México)</option>
+            <option value="es-ES">Español (España)</option>
+            <option value="es-US">Español (EE. UU.)</option>
+            <option value="es-AR">Español (Argentina)</option>
+            <option value="es-CO">Español (Colombia)</option>
+            <option value="es-CL">Español (Chile)</option>
+            <option value="es-PE">Español (Perú)</option>
+            <option value="es-VE">Español (Venezuela)</option>
+          </select>
+        </label>
+        <label class="field"><span>Velocidad de lectura <b id="voiceRateVal">1.0×</b></span><input id="setVoiceRate" type="range" min="0.7" max="1.8" step="0.1" /></label>
+        <label class="check"><input id="setAutoRead" type="checkbox" /> Leer en voz alta las respuestas del tutor automáticamente</label>
+        <p class="muted small">Voz y texto son siempre opcionales: el micrófono solo escucha mientras está rojo y el texto dictado queda para que lo revises antes de enviar. En Chrome, el dictado se procesa en los servidores de Google.</p>
+      </section>
+
+      <section class="set-section">
+        <h3>App</h3>
+        <button id="installBtn" class="btn btn-sm btn-primary hidden">Instalar como app</button>
+        <p id="installHintIos" class="muted small hidden">En iPhone/iPad: Safari → Compartir → <strong>Añadir a pantalla de inicio</strong>.</p>
+        <p id="installDone" class="muted small hidden">Estás usando la app instalada.</p>
+        <p class="muted small">En Android/Chrome aparece “Instalar app” en el menú del navegador.</p>
+        <button id="wipeHistory" class="btn btn-sm btn-ghost danger">Borrar todo el historial</button>
+      </section>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts no-print" aria-live="polite"></div>
+</body>
+</html>
